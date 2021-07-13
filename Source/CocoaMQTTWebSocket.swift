@@ -14,8 +14,8 @@ import CocoaMQTT
 // MARK: - Interfaces
 
 public protocol CocoaMQTTWebSocketConnectionDelegate: AnyObject {
-    
     func connection(_ conn: CocoaMQTTWebSocketConnection, didReceive trust: SecTrust, completionHandler: @escaping (Bool) -> Swift.Void)
+    func connection(_ conn: CocoaMQTTWebSocketConnection, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void)
     
     func connectionOpened(_ conn: CocoaMQTTWebSocketConnection)
     
@@ -257,6 +257,17 @@ extension CocoaMQTTWebSocket: CocoaMQTTWebSocketConnectionDelegate {
         }
     }
 
+    public func connection(_ conn: CocoaMQTTWebSocketConnection, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        guard conn.isEqual(connection) else { return }
+        if let del = delegate {
+            __delegate_queue {
+                del.socket(self, didReceive: challenge, completionHandler: completionHandler)
+            }
+        } else {
+            completionHandler(.performDefaultHandling, nil)
+        }
+    }
+
     public func connectionOpened(_ conn: CocoaMQTTWebSocketConnection) {
         guard conn.isEqual(connection) else { return }
         guard let delegate = delegate else { return }
@@ -349,9 +360,9 @@ public extension CocoaMQTTWebSocket {
 extension CocoaMQTTWebSocket.FoundationConnection: URLSessionWebSocketDelegate {
     public func urlSession(_ session: URLSession, task: URLSessionTask, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
         queue.async {
-            if let trust = challenge.protectionSpace.serverTrust, let delegate = self.delegate {
-                delegate.connection(self, didReceive: trust) { shouldTrust in
-                    completionHandler(shouldTrust ? .performDefaultHandling : .rejectProtectionSpace, nil)
+            if let delegate = self.delegate {
+                delegate.connection(self, didReceive: challenge) { disposition, credentials in
+                    completionHandler(disposition, credentials)
                 }
             } else {
                 completionHandler(.performDefaultHandling, nil)

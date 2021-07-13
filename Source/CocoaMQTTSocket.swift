@@ -13,6 +13,7 @@ import CocoaAsyncSocket
 public protocol CocoaMQTTSocketDelegate: AnyObject {
     func socketConnected(_ socket: CocoaMQTTSocketProtocol)
     func socket(_ socket: CocoaMQTTSocketProtocol, didReceive trust: SecTrust, completionHandler: @escaping (Bool) -> Swift.Void)
+    func socket(_ socket: CocoaMQTTSocketProtocol, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Swift.Void)
     func socket(_ socket: CocoaMQTTSocketProtocol, didWriteDataWithTag tag: Int)
     func socket(_ socket: CocoaMQTTSocketProtocol, didRead data: Data, withTag tag: Int)
     func socketDidDisconnect(_ socket: CocoaMQTTSocketProtocol, withError err: Error?)

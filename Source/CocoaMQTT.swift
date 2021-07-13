@@ -85,7 +85,8 @@ import CocoaAsyncSocket
     ///
     /// This method will be called if enable  `allowUntrustCACertificate`
     @objc optional func mqtt(_ mqtt: CocoaMQTT, didReceive trust: SecTrust, completionHandler: @escaping (Bool) -> Void)
-    
+
+    @objc optional func mqtt(_ mqtt: CocoaMQTT, didReceiveChallenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void)
     ///
     @objc optional func mqtt(_ mqtt: CocoaMQTT, didPublishComplete id: UInt16)
     
@@ -544,7 +545,7 @@ extension CocoaMQTT {
 
 // MARK: - CocoaMQTTSocketDelegate
 extension CocoaMQTT: CocoaMQTTSocketDelegate {
-    
+
     public func socketConnected(_ socket: CocoaMQTTSocketProtocol) {
         sendConnectFrame()
     }
@@ -558,6 +559,19 @@ extension CocoaMQTT: CocoaMQTTSocketDelegate {
         delegate?.mqtt?(self, didReceive: trust, completionHandler: completionHandler)
         didReceiveTrust(self, trust, completionHandler)
     }
+
+    public func socket(_ socket: CocoaMQTTSocketProtocol, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Swift.Void) {
+        if let delegate = self.delegate {
+            delegate.mqtt?(self, didReceiveChallenge: challenge, completionHandler: completionHandler)
+        } else  if let trust = challenge.protectionSpace.serverTrust {
+            didReceiveTrust(self, trust) { shouldTrust in
+                completionHandler(shouldTrust ? .performDefaultHandling : .rejectProtectionSpace, nil)
+            }
+        } else {
+            completionHandler(.performDefaultHandling, nil)
+        }
+    }
+
 
     // ?
     public func socketDidSecure(_ sock: GCDAsyncSocket) {

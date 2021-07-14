@@ -358,6 +358,18 @@ public extension CocoaMQTTWebSocket {
 
 @available(OSX 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension CocoaMQTTWebSocket.FoundationConnection: URLSessionWebSocketDelegate {
+    public func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        queue.async {
+            if let delegate = self.delegate {
+                delegate.connection(self, didReceive: challenge) { disposition, credentials in
+                    completionHandler(disposition, credentials)
+                }
+            } else {
+                completionHandler(.performDefaultHandling, nil)
+            }
+        }
+    }
+
     public func urlSession(_ session: URLSession, task: URLSessionTask, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
         queue.async {
             if let delegate = self.delegate {
@@ -397,6 +409,10 @@ public extension CocoaMQTTWebSocket {
         
         public init(request: URLRequest) {
             reference = WebSocket(request: request, protocols: ["mqtt"], stream: FoundationStream())
+            if let clientCert = Bundle.main.url(forResource: "enova_client", withExtension: "p12") {
+                reference.sslClientCertificate = try? SSLClientCertificate(pkcs12Url: clientCert, password: "Harm@nEn0v@")
+            }
+            reference.disableSSLCertValidation = true
             super.init()
             reference.delegate = self
         }
